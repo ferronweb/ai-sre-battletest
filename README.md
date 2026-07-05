@@ -632,3 +632,9 @@ Edit `backend/src/main.rs`, add a handler function and register it in the
    and Dockerfile
 2. Add the service to `docker/docker-compose.chaos.yml`
 3. Reference it from scenario scripts as needed
+
+---
+
+## License
+
+[MIT](LICENSE)
