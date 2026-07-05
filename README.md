@@ -17,7 +17,7 @@ realistic, deceptive failure modes. Supports pluggable reverse proxies
 ### One-Command Start
 
 ```bash
-make up
+make build && make up
 ```
 
 That's it. After `make up`, the following endpoints are live:
