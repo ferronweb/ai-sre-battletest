@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: ferron3-demo
+    image: ferronserver/ferron:3
     ports:
       - "80:80"
       - "8081:8081"
