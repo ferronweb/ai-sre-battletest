@@ -1,0 +1,11 @@
+http:
+  middlewares:
+    retry-test:
+      retry:
+        attempts: 4
+        initialInterval: 200ms
+        timeout: 30s
+  routers:
+    api:
+      middlewares:
+        - retry-test

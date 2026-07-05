@@ -1,0 +1,7 @@
+tls:
+  certificates:
+    - certFile: /tmp/tls-certs/cert.pem
+      keyFile: /tmp/tls-certs/key.pem
+  options:
+    default:
+      sniStrict: true

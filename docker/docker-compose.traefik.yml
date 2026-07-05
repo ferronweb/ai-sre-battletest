@@ -1,0 +1,63 @@
+services:
+  backend-1:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+
+  backend-2:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+
+  backend-3:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+
+  proxy:
+    image: traefik
+    command:
+      - "--api.insecure=true"
+      - "--experimental.otlpLogs=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.docker.network=web"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.observability.traceVerbosity=detailed"
+      - "--accesslog.otlp.grpc=true"
+      - "--accesslog.otlp.grpc.endpoint=otel-collector:4317"
+      - "--accesslog.otlp.grpc.insecure=true"
+      - "--log.otlp.grpc=true"
+      - "--log.otlp.grpc.endpoint=otel-collector:4317"
+      - "--log.otlp.grpc.insecure=true"
+      - "--metrics.otlp.grpc=true"
+      - "--metrics.otlp.grpc.endpoint=otel-collector:4317"
+      - "--metrics.otlp.grpc.insecure=true"
+      - "--tracing.otlp.grpc=true"
+      - "--tracing.otlp.grpc.endpoint=otel-collector:4317"
+      - "--tracing.otlp.grpc.insecure=true"
+      - "--tracing.serviceName=traefik"
+      - "--tracing.sampleRate=1.0"
+      - "--serversTransport.maxIdleConnsPerHost=0"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-dynamic:/etc/traefik/dynamic
+    depends_on:
+      - otel-collector
+    networks:
+      - web
+      - observability
+
+volumes:
+  traefik-dynamic:

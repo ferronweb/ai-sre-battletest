@@ -1,0 +1,61 @@
+services:
+  dns-poison:
+    image: dns-poison-agent
+    build:
+      context: ../chaos/agents/dns-poison
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "5353:53/udp"
+      - "5353:53/tcp"
+    networks:
+      - web
+    profiles:
+      - chaos
+
+  trace-mangler:
+    image: trace-mangler-agent
+    build:
+      context: ../chaos/agents/trace-mangler
+    ports:
+      - "3001:3001"
+    environment:
+      - LISTEN_ADDR=0.0.0.0:3001
+      - CORRUPT_PCT=0.0
+    networks:
+      - web
+    profiles:
+      - chaos
+
+  trace-flood:
+    image: trace-flood-agent
+    build:
+      context: ../chaos/agents/trace-flood
+    environment:
+      - SPAN_RATE=50000
+      - OTLP_ENDPOINT=http://otel-collector:4317
+      - DURATION_SECS=90
+      - CARDINALITY=20
+    networks:
+      - observability
+    profiles:
+      - chaos
+
+  auth-backend:
+    image: battletest-auth-backend
+    build:
+      context: ../chaos/agents/auth-backend
+    expose:
+      - "8080"
+    environment:
+      - HEALTHY=true
+      - AUTH_FAIL_PCT=0.0
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    profiles:
+      - chaos

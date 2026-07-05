@@ -1,0 +1,15 @@
+services:
+  proxy:
+    image: ferron3-demo
+    ports:
+      - "80:80"
+      - "8081:8081"
+    volumes:
+      - ./config/ferron3/ferron.conf:/etc/ferron/ferron.conf
+      - ./config/ferron3/static:/var/www/static:ro
+      - ./config/ferron3/tls:/etc/ferron/tls:ro
+    depends_on:
+      - otel-collector
+    networks:
+      - web
+      - observability

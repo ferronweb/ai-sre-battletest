@@ -1,0 +1,12 @@
+http:
+  middlewares:
+    cb-test:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.50"
+        checkPeriod: 1s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+  routers:
+    api:
+      middlewares:
+        - cb-test

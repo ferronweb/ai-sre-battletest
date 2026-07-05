@@ -1,0 +1,12 @@
+http:
+  services:
+    api:
+      loadBalancer:
+        healthCheck:
+          path: /
+          interval: 10s
+          timeout: 5s
+        servers:
+          - url: "http://backend-1:3000"
+          - url: "http://backend-2:3000"
+          - url: "http://backend-3:3000"

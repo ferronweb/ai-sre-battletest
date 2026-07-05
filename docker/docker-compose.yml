@@ -1,0 +1,155 @@
+services:
+  # Backends
+  backend-1:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-1-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  backend-2:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-2-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  backend-3:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-3-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  # Observability
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - observability
+
+  tempo:
+    image: grafana/tempo:latest
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo/config.yaml
+      - tempo-data:/var/tempo
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    ports:
+      - "3200:3200"
+    networks:
+      - observability
+
+  mimir:
+    image: grafana/mimir:latest
+    volumes:
+      - ./config/mimir.yaml:/etc/mimir/config.yaml
+      - mimir-data:/data
+    command: ["-config.file=/etc/mimir/config.yaml"]
+    ports:
+      - "9009:9009"
+    networks:
+      - observability
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - ./config/loki.yaml:/etc/loki/config.yaml
+      - loki-data:/loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - observability
+    depends_on:
+      - tempo
+      - mimir
+      - loki
+
+  # Load generation
+  loadgen:
+    image: battletest-loadgen
+    networks:
+      - web
+    profiles:
+      - loadgen
+
+networks:
+  web:
+    driver: bridge
+  observability:
+    driver: bridge
+
+volumes:
+  tempo-data:
+  mimir-data:
+  loki-data:
+  grafana-data:
+  backend-1-data:
+  backend-2-data:
+  backend-3-data:
