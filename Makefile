@@ -20,7 +20,11 @@ COMPOSE_CHAOS := -f $(COMPOSE_DIR)/docker-compose.chaos.yml
         scenario-compression-exclusion scenario-session-ticket-restart \
         scenario-mtls-ca-missing scenario-forwarded-auth-down \
         scenario-basic-auth-concurrency scenario-trace-flood-disk \
-        scenario-admin-api-exposed
+        scenario-admin-api-exposed \
+        scenario-otel-pipeline-queue-backup scenario-pool-exhaustion-slow-route \
+        scenario-retry-idempotency-hazard scenario-dns-record-change \
+        scenario-cascading-downstream-trace scenario-config-drift-admin-edit \
+        scenario-missing-dependency-reload
 
 # ─── Lifecycle ───────────────────────────────────────────────
 
@@ -191,6 +195,43 @@ scenario-admin-api-exposed:
 	@echo "Running Admin API Without Auth scenario (PROXY=$(PROXY))..."
 	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
 		./chaos/scenarios/admin-api-exposed.sh $(PROXY)
+
+# ─── Debugging Story Scenarios ──────────────────────────────
+
+scenario-otel-pipeline-queue-backup:
+	@echo "Running OTel Pipeline Queue Backup scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/otel-pipeline-queue-backup.sh $(PROXY)
+
+scenario-pool-exhaustion-slow-route:
+	@echo "Running Pool Exhaustion Slow Route scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/pool-exhaustion-slow-route.sh $(PROXY)
+
+scenario-retry-idempotency-hazard:
+	@echo "Running Retry Idempotency Hazard scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/retry-idempotency-hazard.sh $(PROXY)
+
+scenario-dns-record-change:
+	@echo "Running DNS Record Change scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/dns-record-change.sh $(PROXY)
+
+scenario-cascading-downstream-trace:
+	@echo "Running Cascading Downstream Trace scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/cascading-downstream-trace.sh $(PROXY)
+
+scenario-config-drift-admin-edit:
+	@echo "Running Config Drift Admin Edit scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/config-drift-admin-edit.sh $(PROXY)
+
+scenario-missing-dependency-reload:
+	@echo "Running Missing Dependency Reload scenario (PROXY=$(PROXY))..."
+	PROXY=$(PROXY) COMPOSE_DIR=$(COMPOSE_DIR) \
+		./chaos/scenarios/missing-dependency-reload.sh $(PROXY)
 
 # ─── Utility ────────────────────────────────────────────────
 

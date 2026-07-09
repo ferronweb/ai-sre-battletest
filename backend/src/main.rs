@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -10,6 +10,8 @@ use tokio_stream::StreamExt;
 use rand::Rng;
 use rand::distr::{Bernoulli, Distribution, Uniform};
 use serde::Deserialize;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tokio::time::interval;
@@ -240,6 +242,15 @@ async fn handle_stream(Path(ms): Path<u64>) -> impl IntoResponse {
         .unwrap()
 }
 
+async fn handle_post_count(State(counter): State<Arc<AtomicU64>>, body: axum::body::Bytes) -> (StatusCode, String) {
+    maybe_inject_latency().await;
+    if let Some(code) = maybe_inject_error().await {
+        return (code, format!("Error {}", code.as_u16()));
+    }
+    let count = counter.fetch_add(1, Ordering::SeqCst) + 1;
+    (StatusCode::OK, format!("post_count:{}:{}", count, String::from_utf8_lossy(&body)))
+}
+
 #[tokio::main]
 async fn main() {
     if let Ok(mut sigterm) =
@@ -251,6 +262,8 @@ async fn main() {
         });
     }
 
+    let post_counter = Arc::new(AtomicU64::new(0));
+
     let app = Router::new()
         .route("/", get(handle_root))
         .route("/health", get(handle_health))
@@ -261,7 +274,9 @@ async fn main() {
         .route("/error", get(handle_error))
         .route("/race", get(handle_race))
         .route("/trace", get(handle_trace))
-        .route("/stream/{ms}", get(handle_stream));
+        .route("/stream/{ms}", get(handle_stream))
+        .route("/post-count", post(handle_post_count))
+        .with_state(post_counter);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     eprintln!("backend listening on 0.0.0.0:3000");

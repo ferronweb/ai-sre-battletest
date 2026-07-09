@@ -343,6 +343,67 @@ Proxy configured for HTTPS on port 443.
 **Signal**: HTTP on port 80 works fine throughout; HTTPS on port 443 has
 ~50% intermittent TLS handshake failures.
 
+### 11. OTel Pipeline Queue Backup
+
+OpenTelemetry Collector becomes unreachable. Ferron proxy events queue up
+and get dropped. Application remains healthy — only observability is degraded.
+
+**Mechanism**: OTel collector container stopped/restarted.
+**Signal**: `observability_event_queue_len` increases, `observability_events_dropped`
+increments, Grafana dashboards show data gaps.
+
+### 12. Connection Pool Exhaustion
+
+Low per-upstream connection pool limit (5). Slow `/stream` requests hold
+connections open, starving the pool for fast routes hitting the same backend.
+
+**Mechanism**: Ferron3 upstream `limit 5` config + high-concurrency slow streams.
+**Signal**: Fast requests experience high latency despite healthy backends;
+`connections_active` near pool limit.
+
+### 13. Retry Idempotency Hazard
+
+Proxy retries POST requests. Backend counter shows many more increments than
+requests sent. Idempotent operations processed multiple times.
+
+**Mechanism**: Ferron3 `retry_connection` config + backend POST counter.
+**Signal**: POST count far exceeds expected (e.g., 227 vs 5 sent).
+
+### 14. DNS Record Change
+
+Backend container recreated with new IP mid-traffic. Tests DNS cache
+behavior and per-IP circuit breaker detection.
+
+**Mechanism**: `docker stop` + `docker start` on backend-1.
+**Signal**: Brief connection failures during DNS re-resolution window;
+`dns.cache_miss` metrics increment.
+
+### 15. Cascading Downstream Trace
+
+Backend's own downstream is slow, not the backend itself. W3C Trace Context
+propagation should make the real bottleneck visible in traces.
+
+**Mechanism**: `LATENCY_MS=2000` on backend-1 only.
+**Signal**: Trace shows backend-1 span taking ~2s; traceparent header present.
+
+### 16. Config Drift Admin Edit
+
+Emergency fix applied via direct file edit + POST /reload, never committed
+to version control. Subsequent deploy would overwrite the fix.
+
+**Mechanism**: Direct file edit + `POST /reload` admin API.
+**Signal**: `active_generation` increments; config diff between running and
+committed versions.
+
+### 17. Missing Dependency Reload
+
+Ferron config references a backend that no longer exists. Reload triggered
+after backend removal. Tests error surfacing when upstream is missing.
+
+**Mechanism**: Backend-4 removed + `POST /reload`.
+**Signal**: Ferron stays healthy; serves traffic to remaining 3 backends;
+logs may show errors about unreachable upstream.
+
 ---
 
 ## AI Agent Prompts
@@ -359,6 +420,14 @@ prompts/
 └── ferron3/
     ├── system-prompt.md
     └── scenarios/
+        ├── gray-failure.md
+        ├── otel-pipeline-queue-backup.md
+        ├── pool-exhaustion-slow-route.md
+        ├── retry-idempotency-hazard.md
+        ├── dns-record-change.md
+        ├── cascading-downstream-trace.md
+        ├── config-drift-admin-edit.md
+        ├── missing-dependency-reload.md
         └── ...
 ```
 
@@ -441,6 +510,14 @@ make scenario-forwarded-auth-down   # Forwarded auth backend down
 make scenario-basic-auth-concurrency  # Basic auth concurrency lockout
 make scenario-trace-flood-disk      # Trace flood fills disk
 make scenario-admin-api-exposed     # Admin API without auth
+# Ferron3-only scenarios (require admin API, HOCON config, OTLP traces)
+make scenario-otel-pipeline-queue-backup    # OTel collector unreachable
+make scenario-pool-exhaustion-slow-route    # Connection pool exhaustion
+make scenario-retry-idempotency-hazard      # Duplicate POST processing
+make scenario-dns-record-change             # Backend IP change mid-traffic
+make scenario-cascading-downstream-trace    # Downstream bottleneck trace
+make scenario-config-drift-admin-edit       # Emergency fix not in VCS
+make scenario-missing-dependency-reload     # Config references missing backend
 ```
 
 ### Chaos Agents
@@ -482,7 +559,7 @@ ai-sre-new/
 ├── backend/                          # Enhanced Rust backend
 │   ├── Cargo.toml
 │   ├── Dockerfile
-│   └── src/main.rs                   # 10 routes, env-var configurable
+│   └── src/main.rs                   # 11 routes, env-var configurable
 ├── loadgen/                          # Rust traffic generator
 │   ├── Cargo.toml
 │   ├── Dockerfile
@@ -520,7 +597,14 @@ ai-sre-new/
 │   │   ├── circuit-breaker-blind-spot.sh
 │   │   ├── health-check-manipulation.sh
 │   │   ├── observability-backpressure.sh
-│   │   └── tls-certificate-mismatch.sh
+│   │   ├── tls-certificate-mismatch.sh
+│   │   ├── otel-pipeline-queue-backup.sh
+│   │   ├── pool-exhaustion-slow-route.sh
+│   │   ├── retry-idempotency-hazard.sh
+│   │   ├── dns-record-change.sh
+│   │   ├── cascading-downstream-trace.sh
+│   │   ├── config-drift-admin-edit.sh
+│   │   └── missing-dependency-reload.sh
 │   └── agents/
 │       ├── dns-poison/               # DNS poisoning container
 │       ├── trace-mangler/            # Trace header corruption proxy
@@ -532,6 +616,14 @@ ai-sre-new/
 │   └── ferron3/
 │       ├── system-prompt.md
 │       └── scenarios/
+│           ├── gray-failure.md
+│           ├── otel-pipeline-queue-backup.md
+│           ├── pool-exhaustion-slow-route.md
+│           ├── retry-idempotency-hazard.md
+│           ├── dns-record-change.md
+│           ├── cascading-downstream-trace.md
+│           ├── config-drift-admin-edit.md
+│           └── missing-dependency-reload.md
 ├── Makefile
 └── README.md
 ```
@@ -566,6 +658,7 @@ ai-sre-new/
 | `/race` | GET | Thundering herd test with optional `?delay_ms=` |
 | `/trace` | GET | Returns trace headers (with optional corruption) |
 | `/stream/{ms}` | GET | SSE-style stream sending heartbeats every 500ms |
+| `/post-count` | POST | Returns total POST count (AtomicU64 counter) |
 
 ### Trace-flood Agent
 
