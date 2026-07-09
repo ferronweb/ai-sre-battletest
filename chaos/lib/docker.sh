@@ -4,9 +4,18 @@ set -euo pipefail
 
 COMPOSE_DIR="${COMPOSE_DIR:-docker}"
 PROXY="${PROXY:-traefik}"
-COMPOSE_BASE="-f ${COMPOSE_DIR}/docker-compose.yml"
-COMPOSE_PROXY="-f ${COMPOSE_DIR}/docker-compose.${PROXY}.yml"
-COMPOSE_ALL="${COMPOSE_BASE} ${COMPOSE_PROXY}"
+PROFILE="${PROFILE:-full}"
+
+# Build COMPOSE_ALL based on profile
+if [ "${PROFILE}" = "lightweight" ]; then
+    COMPOSE_ALL="-f ${COMPOSE_DIR}/docker-compose.ferron3-lightweight.yml"
+elif [ "${PROFILE}" = "logs-only" ]; then
+    COMPOSE_ALL="-f ${COMPOSE_DIR}/docker-compose.ferron3-logs-only.yml"
+else
+    COMPOSE_BASE="-f ${COMPOSE_DIR}/docker-compose.yml"
+    COMPOSE_PROXY="-f ${COMPOSE_DIR}/docker-compose.${PROXY}.yml"
+    COMPOSE_ALL="${COMPOSE_BASE} ${COMPOSE_PROXY}"
+fi
 
 compose() {
     docker compose ${COMPOSE_ALL} "$@"

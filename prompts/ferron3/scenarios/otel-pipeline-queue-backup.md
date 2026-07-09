@@ -33,3 +33,18 @@ Your response must include at least:
 - OTel collector container status (unhealthy or stopped)
 - A metric query or log line confirming the collector is unreachable
 - The Grafana Explore URL or query used to find each piece of evidence
+
+## Lightweight Mode Notes
+
+**This scenario is NOT applicable in lightweight mode.**
+
+The lightweight profile does not include an OpenTelemetry Collector, so this scenario cannot occur. The observability pipeline queue backup scenario requires:
+- OTel Collector running and configured
+- OTLP export from Ferron to the collector
+- Collector becoming unreachable or overloaded
+
+In lightweight mode, Ferron either:
+- Exports metrics directly via Prometheus (no OTLP)
+- Has no metrics export at all (logs-only profile)
+
+Therefore, this scenario should be skipped when testing in lightweight mode.

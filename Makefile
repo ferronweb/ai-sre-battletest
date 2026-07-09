@@ -4,9 +4,12 @@ COMPOSE_BASE := -f $(COMPOSE_DIR)/docker-compose.yml
 COMPOSE_PROXY := -f $(COMPOSE_DIR)/docker-compose.$(PROXY).yml
 COMPOSE_ALL := $(COMPOSE_BASE) $(COMPOSE_PROXY)
 COMPOSE_CHAOS := -f $(COMPOSE_DIR)/docker-compose.chaos.yml
+COMPOSE_LIGHTWEIGHT := -f $(COMPOSE_DIR)/docker-compose.ferron3-lightweight.yml
+COMPOSE_LOGS_ONLY := -f $(COMPOSE_DIR)/docker-compose.ferron3-logs-only.yml
 
 .PHONY: up down build rebuild restart logs ps \
         up-chaos down-chaos \
+        up-lightweight down-lightweight up-logs-only down-logs-only \
         scenario-gray-failure scenario-latency \
         scenario-recovery-herd scenario-dns-poisoning \
         scenario-timeout-mismatch \
@@ -64,6 +67,34 @@ up-chaos:
 
 down-chaos:
 	docker compose $(COMPOSE_ALL) $(COMPOSE_CHAOS) down
+
+# ─── Lightweight Profiles (Ferron 3) ─────────────────────────
+
+up-lightweight:
+	@echo "Starting lightweight stack (logs + Prometheus)..."
+	docker compose $(COMPOSE_LIGHTWEIGHT) up -d
+
+down-lightweight:
+	docker compose $(COMPOSE_LIGHTWEIGHT) down -v
+
+up-logs-only:
+	@echo "Starting logs-only stack..."
+	docker compose $(COMPOSE_LOGS_ONLY) up -d
+
+down-logs-only:
+	docker compose $(COMPOSE_LOGS_ONLY) down -v
+
+logs-lightweight:
+	docker compose $(COMPOSE_LIGHTWEIGHT) logs -f
+
+logs-logs-only:
+	docker compose $(COMPOSE_LOGS_ONLY) logs -f
+
+ps-lightweight:
+	docker compose $(COMPOSE_LIGHTWEIGHT) ps
+
+ps-logs-only:
+	docker compose $(COMPOSE_LOGS_ONLY) ps
 
 # ─── Scenarios ───────────────────────────────────────────────
 
@@ -246,6 +277,14 @@ prompt-traefik:
 prompt-ferron3:
 	@echo "=== Ferron 3 System Prompt ==="
 	@cat prompts/ferron3/system-prompt.md
+	@echo ""
+	@echo "=== Scenario Prompt ==="
+	@echo "Pick a scenario:"
+	@ls prompts/ferron3/scenarios/
+
+prompt-ferron3-lightweight:
+	@echo "=== Ferron 3 Lightweight System Prompt ==="
+	@cat prompts/ferron3/system-prompt-lightweight.md
 	@echo ""
 	@echo "=== Scenario Prompt ==="
 	@echo "Pick a scenario:"

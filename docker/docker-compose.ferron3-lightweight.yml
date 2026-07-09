@@ -1,0 +1,99 @@
+services:
+  # Backends
+  backend-1:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-1-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  backend-2:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-2-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  backend-3:
+    image: battletest-backend
+    expose:
+      - "3000"
+    networks:
+      - web
+    volumes:
+      - backend-3-data:/var/lib/backend
+    environment:
+      - LATENCY_MS=0
+      - ERROR_PCT=0.0
+      - ERROR_CODE=500
+      - TRACE_CORRUPT_PCT=0.0
+      - HEALTHY=true
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
+  # Proxy with Prometheus metrics endpoint
+  proxy:
+    image: ferronserver/ferron:3
+    ports:
+      - "80:80"
+      - "8081:8081"
+      - "8889:8889"
+    volumes:
+      - ./config/ferron3/ferron-lightweight.conf:/etc/ferron/ferron.conf
+    networks:
+      - web
+
+  # Load generation
+  loadgen:
+    image: battletest-loadgen
+    networks:
+      - web
+    profiles:
+      - loadgen
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  backend-1-data:
+  backend-2-data:
+  backend-3-data:

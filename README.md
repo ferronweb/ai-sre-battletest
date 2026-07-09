@@ -120,6 +120,97 @@ The proxy bridges both networks.
 
 ---
 
+## Lightweight Profiles (Constrained Environments)
+
+For testing AI agents in constrained environments without the full OTel stack,
+two lightweight profiles are available for Ferron 3:
+
+### Logs + Prometheus Profile
+
+Includes proxy + backends + Prometheus metrics endpoint. No Grafana, Loki,
+Tempo, or Mimir.
+
+```bash
+# Start lightweight stack
+make up-lightweight
+
+# Run scenarios
+make scenario-gray-failure
+
+# Get the lightweight system prompt
+make prompt-ferron3-lightweight
+
+# Stop
+make down-lightweight
+```
+
+**Observability access:**
+- **Metrics**: `curl http://localhost:8889/metrics`
+- **Logs**: `docker logs proxy`, `docker logs backend-1`, etc.
+- **Admin API**: `curl http://localhost:8081/status`
+
+### Logs-Only Profile
+
+Includes proxy + backends only. No metrics endpoint, no centralized logging.
+
+```bash
+# Start logs-only stack
+make up-logs-only
+
+# Run scenarios
+make scenario-latency
+
+# Stop
+make down-logs-only
+```
+
+**Observability access:**
+- **Logs**: `docker logs proxy`, `docker logs backend-1`, etc.
+- **Admin API**: `curl http://localhost:8081/status`
+
+### Lightweight Profile Limitations
+
+| Feature | Full Stack | Logs + Prometheus | Logs Only |
+|---------|-----------|-------------------|-----------|
+| Distributed traces | Yes | No | No |
+| Centralized logging | Yes (Loki) | No | No |
+| Metrics | Yes (Mimir) | Yes (Prometheus) | No |
+| Grafana dashboards | Yes | No | No |
+| Pre-built dashboards | Yes | No | No |
+
+### Scenario Compatibility
+
+Most scenarios work in lightweight mode with adapted evidence collection.
+Some scenarios are NOT applicable:
+
+- **Observability Backpressure** — Requires OTel Collector
+- **OTel Pipeline Queue Backup** — Requires OTel Collector
+- **Cascading Downstream Trace** — Limited without distributed traces
+
+Each scenario prompt includes "Lightweight Mode Notes" with adapted
+evidence collection instructions.
+
+### Agent Access in Lightweight Mode
+
+The agent uses CLI tools instead of Grafana MCP:
+
+```bash
+# Query Prometheus metrics
+curl -s http://localhost:8889/metrics | grep ferron
+
+# Access container logs
+docker logs proxy --since 5m
+docker logs backend-1 --since 5m
+
+# Check admin API
+curl -s http://localhost:8081/status
+```
+
+See `prompts/ferron3/system-prompt-lightweight.md` for the full agent
+instructions for lightweight mode.
+
+---
+
 ## Battle-Test Workflow
 
 This is the end-to-end process for running a battle-test against an AI SRE
@@ -568,6 +659,8 @@ ai-sre-new/
 │   ├── docker-compose.yml            # Base: backends + observability
 │   ├── docker-compose.traefik.yml    # Traefik proxy + labels
 │   ├── docker-compose.ferron3.yml    # Ferron 3 proxy
+│   ├── docker-compose.ferron3-lightweight.yml  # Ferron 3 + Prometheus (no OTel)
+│   ├── docker-compose.ferron3-logs-only.yml    # Ferron 3 + logs only
 │   ├── docker-compose.chaos.yml      # Chaos agents
 │   └── config/
 │       ├── otel-collector.yaml
@@ -576,7 +669,9 @@ ai-sre-new/
 │       ├── loki.yaml
 │       ├── grafana-datasources.yaml
 │       ├── ferron3/
-│       │   └── ferron.conf
+│       │   ├── ferron.conf           # Full OTel config
+│       │   ├── ferron-lightweight.conf  # Prometheus metrics config
+│       │   └── ferron-logs-only.conf    # Logs only config
 │       └── traefik/
 │           └── dynamic/
 │               ├── retry.yml
@@ -614,7 +709,8 @@ ai-sre-new/
 │   │   ├── system-prompt.md
 │   │   └── scenarios/
 │   └── ferron3/
-│       ├── system-prompt.md
+│       ├── system-prompt.md           # Full OTel stack instructions
+│       ├── system-prompt-lightweight.md  # Lightweight mode instructions
 │       └── scenarios/
 │           ├── gray-failure.md
 │           ├── otel-pipeline-queue-backup.md
